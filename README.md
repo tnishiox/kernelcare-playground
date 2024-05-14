@@ -140,6 +140,64 @@ $ w3m report.html
 
 The column `#x` indicates the number of found vulnerabilities. Indeed all vulnerabilities have been addressed and the remaining is zero.
 
+## Protection of Hidden Insecure Application Processes
+
+Having installed all latest packages and applied kernel live patches, the scanner shows all green now. However, are you aware that there are still unprotected application processes existing?
+
+There are services keep running with unpatched libraries even if you installed security patches. In order to make security patches effective, it is highly recommended to restart those services. You can use `checkrestart` or `needs-restarting` command to know which services require restarting.
+
+```bash
+sudo checkrestart | grep -E "^(systemctl|service)"
+systemctl restart networkd-dispatcher.service
+systemctl restart polkit.service
+systemctl restart udisks2.service
+systemctl restart clean-mount-point@.service
+systemctl restart ModemManager.service
+systemctl restart packagekit.service
+systemctl restart packagekit-offline-update.service
+service cron restart
+service irqbalance restart
+service atd restart
+service shellinabox restart
+service unattended-upgrades restart
+service ssh restart
+```
+**Caution:** `checkrestart` is not available in the hands-on VM
+
+However, what if you have important services which you never want to restart? For example, Systemd and D-Bus are typical ones, since they have many dependencies, restarting them will cause significant impact on the running system. Normally, your only option would be to reboot the entire system.
+
+TuxCare's unique LibCare can apply patches for OpenSSL and glibc in-memory to such application processes without requiring a restart.
+
+
+#### 1. Make sure you have installed all updates from the repo
+```bash
+sudo apt-get upgrade
+```
+
+#### 2. Apply the available patches to userspace processes which require protection
+```bash
+sudo kcarectl --lib-update
+```
+
+#### 3. Check which processes were applied patches in-memory
+```bash
+sudo kcarectl --lib-info | jq | grep comm
+      "comm": "",
+      "comm": "cron",
+      "comm": "dbus-daemon",
+      "comm": "irqbalance",
+      ...
+```
+
+#### 4. Check the details of the fixed CVEs in-memory
+```bash
+sudo kcarectl --lib-patch-info | jq | grep \"cve\"
+          "cve": "CVE-2022-4450",
+          ...
+```
+
+This allows the system to become more robust, and all paching works up to this point have been achieved without the need to reboot the system.
+
 ## How to reset?
 Rebooting lets the system discard all changes and reset to its initial state.
 ```bash
