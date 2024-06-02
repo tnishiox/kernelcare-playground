@@ -65,7 +65,7 @@ $ uname -r
 5.4.0-125-generic
 ```
 
-## Advanced use case with a vulnerability scanner
+## Practical use case with a vulnerability scanner
 In this section, we will verify that KernelCare's live patch can address vulnerabilities and pass the diagnostics of OpenScap, an open-source vulnerability scanner, without needing to reboot the system.
 
 #### 1. Unload the patch first as initialization
@@ -189,6 +189,90 @@ $ sudo kcarectl --lib-patch-info | jq | grep \"cve\"
 ```
 
 This allows the system to become more robust, and all paching works up to this point have been achieved without the need to reboot the system.
+
+## Advanced demonstration using exploit
+Live Patching not only serves as a countermeasure against vulnerability scanners, but also actually prevents exploits, as it can be demonstrated by running the POC code of the CVE-2022-0847 as known as DirtyPipe. Note that this demonstration is not available in the managed system but it can be requested separately.
+
+* CVE-2022-0847 DirtyPipe Exploit (https://github.com/febinrev/dirtypipez-exploit)  
+  Credit: Max Kellermann and Febin Mon Saji
+
+#### 1. Make sure the `guest` user doesn't have root privileges
+```bash
+$ whoami
+guest
+$ id
+uid=1001(guest) gid=1001(guest) groups=1001(guest)
+$ su
+Password: 
+su: Authentication failure
+```
+
+#### 2. Unload kernel patches
+```bash
+$ sudo kcarectl --unload
+KernelCare protection disabled. Your kernel might not be safe
+$ uname -r
+5.8.0-29-generic
+```
+
+#### 3. Run the exploit code
+The attack succeeds and root privileges are taken.
+```bash
+$ dirtypipez 
+[+] hijacking suid binary..
+[+] dropping suid shell..
+[+] restoring suid binary..
+[+] popping root shell.. (dont forget to clean up /tmp/sh ;))
+# 
+```
+
+#### 4. Confirm you are running as rootv now
+```bash
+# whoami
+root
+# id
+uid=0(root) gid=0(root) groups=0(root),1001(guest)
+```
+
+#### 5. Clean up and exit from the root shell
+```bash
+# rm /tmp/sh
+# exit
+$
+```
+
+#### 6. Apply kernel patches
+```bash
+$ sudo kcarectl --update
+Downloading updates
+Patch level 11 applied. Effective kernel version 5.8.0-63.7120.04.1
+Kernel is safe
+$ uname -r
+5.8.0-63.7120.04.1
+```
+
+#### 7. Check the CVE-2022-0847 is included in the kernel patches
+```bash
+$ sudo kcarectl --patch-info | grep " CVE-2022-0847"
+kpatch-cve: CVE-2022-0847
+```
+
+#### 8. Make sure the exploit fails
+This time kernel shall block the attack to escalate privileges.
+```bash
+$ dirtypipez /usr/bin/sudo
+[+] hijacking suid binary..
+[+] dropping suid shell..
+usage: sudo -h | -K | -k | -V
+usage: sudo -v [-AknS] [-g group] [-h host] [-p prompt] [-u user]
+usage: sudo -l [-AknS] [-g group] [-h host] [-p prompt] [-U user] [-u user] [command]
+usage: sudo [-AbEHknPS] [-r role] [-t type] [-C num] [-g group] [-h host] [-p prompt] [-T timeout] [-u user] [VAR=value] [-i|-s] [<command>]
+usage: sudo -e [-AknS] [-r role] [-t type] [-C num] [-g group] [-h host] [-p prompt] [-T timeout] [-u user] file ...
+[+] restoring suid binary..
+[+] popping root shell.. (dont forget to clean up /tmp/sh ;))
+sh: 1: /tmp/sh: not found
+$
+```
 
 ## How to reset?
 Rebooting lets the system discard all changes and reset to its initial state.
