@@ -15,17 +15,17 @@ Access the API endpoint `https://<server-api-endpoint>` with your internet brows
 <img src="./images/login.png" alt="Login Image" style="width: 50%;">
 
 #### 2. Check the running OS & Kernel versions
-The system shall be running `Ubuntu 20.04.5 LTS`, installed from an ISO image and has not had security updates applied. Kernel version is `5.4.0-125-generic`.
+The system shall be running `Ubuntu 20.04.6 LTS`, installed from an ISO image and has not had security updates applied. Kernel version is `5.8.0-29-generic`.
 
 ```bash
 $ sudo lsb_release -a
 No LSB modules are available.
-Distributor ID:	Ubuntu
-Description:	Ubuntu 20.04.5 LTS
-Release:	20.04
-Codename:	focal
+Distributor ID: Ubuntu
+Description:    Ubuntu 20.04.6 LTS
+Release:        20.04
+Codename:       focal
 $ uname -r
-5.4.0-125-generic
+5.8.0-29-generic
 ```
 
 #### 3. Register the system with a patch server
@@ -40,20 +40,20 @@ Server Registered
 ```bash
 $ sudo kcarectl --update
 Updates already downloaded
-Patch level 40 applied. Effective kernel version 5.4.0-177.197
+Patch level 11 applied. Effective kernel version 5.8.0-63.7120.04.1
 Kernel is safe
 ```
 
 #### 5. Make sure the effective Kernel is updated without rebooting
 ```bash
 $ uname -r
-5.4.0-177.197
+5.8.0-63.7120.04.1
 ```
 
 #### 6. (optional) Explore the details of the CVE fixes applied to the running Kernel
 ```bash
 $ sudo kcarectl --patch-info | grep kpatch-cve: | less
-kpatch-cve: CVE-2022-33655
+kpatch-cve: CVE-2020-25705
 ...
 ```
 
@@ -62,7 +62,7 @@ kpatch-cve: CVE-2022-33655
 $ sudo kcarectl --unload
 KernelCare protection disabled. Your kernel might not be safe
 $ uname -r
-5.4.0-125-generic
+5.8.0-29-generic
 ```
 
 ## Practical use case with a vulnerability scanner
@@ -75,11 +75,11 @@ KernelCare protection disabled. Your kernel might not be safe
 ```
 
 #### 2. Count the number of existing vulnerabilities in the system
-Initially, 181 unresolved vulnerabilities are found. This is because the system has not applied security updates for Ubuntu 20.04.05. Note that the scanning may take about 30 seconds to complete.
+Initially, 23 unresolved vulnerabilities are found. This is because the system has not applied security updates for Ubuntu 20.04.06. Note that the scanning may take about 30 seconds to complete.
 
 ```bash
 $ oscap oval eval --report report.html com.ubuntu.$(lsb_release -cs).usn.oval.xml | grep -v oval:com.ubuntu.focal:def:100 | grep true | wc -l
-180
+23
 ```
 
 #### 3. Install updates from the apt repository
@@ -88,35 +88,35 @@ $ sudo apt-get upgrade -qq -y
 ```
 
 ```bash
-$ sudo apt-get install -qq -y fwupd libfwupd2 libfwupdplugin5 linux-generic linux-headers-generic linux-image-generic python3-update-manager ubuntu-advantage-tools update-manager-core
+$ sudo apt-get install -qq -y linux-image-5.8.0-63-generic
 ```
 
 #### 4. Run the scanner again
-Now you should have installed all available security updates. Despite that there are still 33 remaining vulnerabilities.
+Now you should have installed all available security updates. Despite that there are still 15 remaining vulnerabilities.
 ```bash
 $ oscap oval eval --report report.html com.ubuntu.$(lsb_release -cs).usn.oval.xml | grep -v oval:com.ubuntu.focal:def:100 | grep true | wc -l
-33
+15
 ```
 
 #### 5. Inspect the scanner report
 Access `https://<server-api-endpoint>/<vm-id>/report.html`
 <img src="./images/scanner-report-01.png" alt="Scanner Report Image" style="width: 80%;">
 
-Remaining issues were reported against Kernel, because the system is still running with the default kernel `5.4.0-125-generic` although a new kernel package has been installed to the filesystem. Normally, you have to reboot the system to activate the new kernel. However, in certain systems, this can cause downtime, which may be problematic.
+Remaining issues were reported against Kernel, because the system is still running with the old kernel `5.8.0-29-generic` although a new kernel package has been installed to the filesystem. Normally, you have to reboot the system to activate the new kernel. However, in certain systems, this can cause downtime, which may be problematic.
 
 #### 6. Apply the patch to the In-memory Kernel without rebooting
 Make sure the `uname -r` command reports the effective running kernel with a security updated version.
 ```bash
 $ uname -r
-5.4.0-125-generic
+5.8.0-29-generic
 
 $ sudo kcarectl --update
 Updates already downloaded
-Patch level 40 applied. Effective kernel version 5.4.0-177.197
+Patch level 11 applied. Effective kernel version 5.8.0-63.7120.04.1
 Kernel is safe
 
 $ uname -r
-5.4.0-177.197
+5.8.0-63.7120.04.1
 ```
 
 #### 7. Run the scanner again
@@ -260,7 +260,7 @@ kpatch-cve: CVE-2022-0847
 #### 8. Make sure the exploit fails
 This time kernel shall block the attack to escalate privileges.
 ```bash
-$ dirtypipez /usr/bin/sudo
+$ dirtypipez
 [+] hijacking suid binary..
 [+] dropping suid shell..
 usage: sudo -h | -K | -k | -V
