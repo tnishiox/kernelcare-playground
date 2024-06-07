@@ -1,14 +1,14 @@
 # KernelCare Playground
 
-## What is this?
+## I. What is this?
 This is a cloud-based demo system where you can try TuxCare's KernelCare. In a managed environment that requires no installation, you can use the web console to try the basic usage of KernelCare's live patching.
 
-## Prerequisites and Requirements
+## II. Prerequisites and Requirements
 * Internet Browser
 * HTTPS access (port: 443)
 * Login credentials (provided separately)
 
-## Let's get started right away
+## III. Let's get started right away
 #### 1. Open the Web console
 Access the API endpoint `https://<server-api-endpoint>` with your internet browser. A login prompt will appear. Log in to the system using the credentials provided.
 
@@ -65,7 +65,7 @@ $ uname -r
 5.8.0-29-generic
 ```
 
-## Practical use case with a vulnerability scanner
+## IV. Practical use case with a vulnerability scanner
 In this section, we will verify that KernelCare's live patch can address vulnerabilities and pass the diagnostics of OpenScap, an open-source vulnerability scanner, without needing to reboot the system.
 
 #### 1. Unload the patch first as initialization
@@ -132,7 +132,7 @@ Reload `https://<server-api-endpoint>/<vm-id>/report.html`
 
 The column `#x` indicates the number of found vulnerabilities. As you can see, all vulnerabilities have been addressed and the remaining is zero.
 
-## Protection of Hidden Insecure Application Processes
+## V. Protection of Hidden Insecure Application Processes
 
 Having installed all latest packages and applied kernel live patches, the scanner shows all green now. However, are you aware that there are still unprotected application processes existing?
 
@@ -190,7 +190,7 @@ $ sudo kcarectl --lib-patch-info | jq | grep \"cve\"
 
 This allows the system to become more robust, and all paching works up to this point have been achieved without the need to reboot the system.
 
-## Advanced demonstration using exploit
+## VI. Advanced demonstration using exploits
 Live Patching not only serves as a countermeasure against vulnerability scanners, but also actually prevents exploits, as it can be demonstrated by running the POC code of the CVE-2022-0847 as known as DirtyPipe. Note that this demonstration is not available in the managed system but it can be requested separately.
 
 * CVE-2022-0847 DirtyPipe Exploit (https://github.com/febinrev/dirtypipez-exploit)  
@@ -273,14 +273,78 @@ usage: sudo -e [-AknS] [-r role] [-t type] [-C num] [-g group] [-h host] [-p pro
 sh: 1: /tmp/sh: not found
 $
 ```
+## VII. Libcare Test with a real exploit
+Demonstrate Libcare can protect running application processs from known CVEs by applying patches in memory. Use CVE-2023-4813 as an example.
 
-## How to reset?
+* https://nvd.nist.gov/vuln/detail/CVE-2023-4813 (getaddrinfo)  
+  Test Code: https://github.com/tnishiox/cve-2023-4813
+
+#### 1. Reboot the VM to rollback to the initial state
+Reboot the system if you have installed the latest 'libc6' package to reproduce the vulnerability of CVE-2023-4813.
+```bash
+$ sudo reboot -f
+```
+
+#### 2. Register with the patch server again
+```bash
+$ sudo kcarectl --register ubuntu-staging
+Server Registered
+```
+
+#### 3. Run exploit to see the impact of the vulnerability
+
+The test code 'cve-2023-4813' will cause a segfault if the system is vulnerable.
+
+```bash
+$ cve-2023-4813 example.org                       
+Segmentation fault (core dumped)
+```
+
+Any applications calling 'getaddrinfo' can cause a crash if you have a certain configuration in '/etc/nsswitch.conf'. For example even 'ping' command can crash.
+
+```bash
+$ cat /etc/nsswitch.conf | grep host
+hosts:          dns [SUCCESS=continue] files
+```
+
+#### 4. Run exploit again
+This time add delay at startup by giving the 2nd argmnent, and also run the program in background.
+
+```bash
+$ cve-2023-4813 example.org 30 &
+[1] 6023
+$ Wait for 30 seconds.
+Run 'sudo kcarectl --lib-update' in the meantime.
+```
+
+#### 5. Quickly patch glibc in memory before the application wakes up
+By doing that 'glibc' loaded by 'cve-2023-4813' process can be fixed in memory.
+
+```bash
+$ sudo kcarectl --lib-update
+The patches have been successfully applied to 33 newly discovered processes. The overall amount of applied patches is 49.
+Object `libc-2.31.so` is patched for 33 processes.
+Object `libcrypto.so.1.1` is patched for 16 processes.
+Userspace patches are applied.
+```
+
+#### 6. Wait until the application wakes up and show result
+You should be able to confirm the application avoids crash and exit without problem this time.
+
+```bash
+$ getaddrinfo: Name or service not known
+
+[1]+  Exit 2                  cve-2023-4813 example.org 30
+```
+Note that 'Name or service not known' error is expected result in this case.
+
+## VIII. How to reset?
 Rebooting lets the system discard all changes and reset to its initial state.
 ```bash
 $ sudo reboot -f
 ```
 
-## Limitations
+## IX. Limitations
 - Available Shell Commands
 
     Users are restricted to a limited bash shell and can only execute permitted commands.
@@ -290,7 +354,9 @@ $ sudo reboot -f
     apt-get
     cat
     checkrestart
+    cve-2023-4813
     grep
+    id
     jq
     kcarectl
     kcare-scanner-interface
@@ -304,6 +370,7 @@ $ sudo reboot -f
     uname
     w3m
     wc
+    whoami
     ```
 
 - Users can access only the home directory.
