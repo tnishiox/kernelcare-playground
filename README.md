@@ -1,5 +1,16 @@
 # KernelCare Playground
 
+## Table of Contents
+- [What is this?](#i-what-is-this)
+- [Prerequisites and Requirements](#ii-prerequisites-and-requirements)
+- [Let's get started right away](#iii-lets-get-started-right-away)
+- [Practical use case with a vulnerability scanner](#iv-practical-use-case-with-a-vulnerability-scanner)
+- [Protection of Hidden Insecure Application Processes](#v-protection-of-hidden-insecure-application-processes)
+- [Advanced demonstration using exploits](#vi-advanced-demonstration-using-exploits)
+- [Libcare Test with a real exploit](#vii-libcare-test-with-a-real-exploit)
+- [How to reset?](#viii-how-to-reset)
+- [Limitations](#ix-limitations)
+
 ## I. What is this?
 This is a cloud-based demo system where you can try TuxCare's KernelCare. In a managed environment that requires no installation, you can use the web console to try the basic usage of KernelCare's live patching.
 
