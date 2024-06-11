@@ -10,6 +10,7 @@
 - [Libcare Test with a real exploit](#vii-libcare-test-with-a-real-exploit)
 - [How to reset?](#viii-how-to-reset)
 - [Limitations](#ix-limitations)
+- [References](#x-references)
 
 ## I. What is this?
 This is a cloud-based demo system where you can try TuxCare's KernelCare. In a managed environment that requires no installation, you can use the web console to try the basic usage of KernelCare's live patching.
@@ -390,3 +391,6 @@ $ sudo reboot -f
 - None of the file transfer protocols (scp, sftp, rsync) is permitted.
 - System will automatically reset if a user remains logged in for an extended period.
 - Target system regularly reboots to reset to its initial state regardless of the login state.
+
+## X. References
+- kcarectl manual (https://docs.tuxcare.com/live-patching-services/#kcarectl)
