@@ -8,9 +8,10 @@
 - [Protection of Hidden Insecure Application Processes](#v-protection-of-hidden-insecure-application-processes)
 - [Advanced demonstration using exploits](#vi-advanced-demonstration-using-exploits)
 - [Libcare Test with a real exploit](#vii-libcare-test-with-a-real-exploit)
-- [How to reset?](#viii-how-to-reset)
-- [Limitations](#ix-limitations)
-- [References](#x-references)
+- [LibCare Usage in containers](#viii-libcare-usage-in-containers)
+- [How to reset?](#ix-how-to-reset)
+- [Limitations](#x-limitations)
+- [References](#xi-references)
 
 ## I. What is this?
 This is a cloud-based demo system where you can try TuxCare's KernelCare. In a managed environment that requires no installation, you can use the web console to try the basic usage of KernelCare's live patching.
@@ -350,13 +351,84 @@ $ getaddrinfo: Name or service not known
 ```
 Note that 'Name or service not known' error is expected result in this case.
 
-## VIII. How to reset?
+## VIII. LibCare Usage in containers
+LibCare can patch libraries in containers. It can patch both the host and containers, even if the OS distributions or glibc versions differ between them.
+
+#### 1. Upgrade glibc in Host
+Make sure to upgrade libc in the host first for the sake of CVE-2023-4813, otherwise, Docker will fail to start in this demo setup.
+
+```bash
+$ sudo apt-get upgrade
+```
+
+#### 2. Start Docker Daemon
+
+```bash
+$ sudo systemctl restart docker
+```
+
+#### 3. Run the CVE-2023-4813 container
+
+This container runs the exploit of CVE-2023-4813. It will have a 10-second pause at the beginning so that you can patch glibc in the container during that time.
+
+```bash
+$ sudo docker run -t cve-2023-4813 cat /etc/almalinux-release
+AlmaLinux release 8.8 (Sapphire Caracal)
+
+$ sudo docker run -t cve-2023-4813
+Wait for 10 seconds.
+Run 'sudo kcarectl --lib-update' in the meantime.
+bash: line 1:     7 Segmentation fault      (core dumped) /app/cve-2023-4813 example.org 10 2>&1
+```
+
+The application will crash since the container is based on the almalinux:8.8-minimal image using the old `libc-2.28.so`, which was vulnerable against CVE-2023-4813.
+
+#### 4. Run the CVE-2023-4813 container again in Background
+
+Next, run the container in the background and apply the library patch while it's sleeping to see if the application can avoid crashing. Make sure to register the VM with the patch server first if you have not done so.
+
+```bash
+$ sudo kcarectl --register ubuntu-staging
+Server Registered
+
+$ sudo docker run -t cve-2023-4813 &
+[1] 56229
+guest@ubuntu-12:~$ Wait for 10 seconds.
+Run 'sudo kcarectl --lib-update' in the meantime.
+```
+
+#### 5. Immediately apply the library patch
+
+Immediately run `sudo kcarectl --lib-update` to apply the library patch.
+
+```bash
+guest@ubuntu-12:~$ sudo kcarectl --lib-update
+The patches have been successfully applied to 2 newly discovered processes. The overall amount of applied patches is 38.
+Object `libc-2.31.so (deleted)` is patched for 25 processes.
+Object `libcrypto.so.1.1 (deleted)` is patched for 11 processes.
+Object `libc-2.28.so` is patched for 2 processes.
+Userspace patches are applied.
+```
+
+This time, you can see two versions of glibc, libc-2.31.so and libc-2.28.so, are patched. libc-2.31.so is from the Ubuntu 20.04 host, and libc-2.28.so is from the AlmaLinux 8 container.
+
+#### 6. Verify the result of the container
+
+The container will exit without causing a crash this time thanks to the library patching. As shown, LibCare can seamlessly handle both the host and containers.
+
+```bash
+ getaddrinfo: Name or service not known
+
+[1]+  Exit 2                  sudo docker run -t cve-2023-4813
+```
+
+## IX. How to reset?
 Rebooting lets the system discard all changes and reset to its initial state.
 ```bash
 $ sudo reboot -f
 ```
 
-## IX. Limitations
+## X. Limitations
 - Available Shell Commands
 
     Users are restricted to a limited bash shell and can only execute permitted commands.
@@ -367,6 +439,7 @@ $ sudo reboot -f
     cat
     checkrestart
     cve-2023-4813
+    docker
     grep
     id
     jq
@@ -378,7 +451,9 @@ $ sudo reboot -f
     oscap
     realpath
     reboot
+    service
     sudo
+    systemctl
     uname
     w3m
     wc
@@ -392,5 +467,5 @@ $ sudo reboot -f
 - System will automatically reset if a user remains logged in for an extended period.
 - Target system regularly reboots to reset to its initial state regardless of the login state.
 
-## X. References
+## XI. References
 - kcarectl manual (https://docs.tuxcare.com/live-patching-services/#kcarectl)
